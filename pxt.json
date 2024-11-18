@@ -1,15 +1,15 @@
 {
-    "name": "pxt-kidsbit-vx",
-    "version": "0.0.0",
+    "name": "pxt-PTKidsBIT",
+    "version": "2.2.11",
     "description": "",
+    "license": "MIT",
     "dependencies": {
-        "core": "*",
-        "radio": "*",
-        "microphone": "*"
+        "core": "*"
     },
     "files": [
         "README.md",
-        "main.blocks",
+        "PTKidsBIT.ts",
+        "main.py",
         "main.ts"
     ],
     "testFiles": [
@@ -17,11 +17,11 @@
     ],
     "public": true,
     "targetVersions": {
-        "target": "7.0.51",
+        "target": "6.0.25",
         "targetId": "microbit"
     },
     "supportedTargets": [
         "microbit"
     ],
-    "preferredEditor": "blocksprj"
+    "preferredEditor": "tsprj"
 }
