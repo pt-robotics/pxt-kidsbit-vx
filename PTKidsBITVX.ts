@@ -11,8 +11,6 @@ let Sensor_Right: number[] = []
 let Num_Sensor = 0
 let LED_PIN = 0
 
-let ADC_Version = 1
-let Read_ADC_Version = false
 let PCA = 0x40
 let initI2C = false
 let SERVOS = 0x06
@@ -40,7 +38,11 @@ enum Motor_Write {
     //% block="1"
     Motor_1,
     //% block="2"
-    Motor_2
+    Motor_2,
+    //% block="3"
+    Motor_3,
+    //% block="4"
+    Motor_4
 }
 
 enum _Turn {
@@ -61,13 +63,6 @@ enum Servo_Write {
     //% block="P8"
     P8,
     //% block="P12"
-    P12
-}
-
-enum Servo_Write2 {
-    //% block="P8"
-    P8,
-    //% block="P12"
     P12,
     //% block="S0"
     S0,
@@ -85,13 +80,6 @@ enum Servo_Write2 {
     S6,
     //% block="S7"
     S7
-}
-
-enum Servo_Mode {
-    //% block="Release"
-    Release,
-    //% block="Lock"
-    Lock
 }
 
 enum Button_Status {
@@ -174,8 +162,8 @@ enum Turn_Line {
     Right
 }
 
-//% color="#51cb57" icon="\u2B9A"
-namespace PTKidsBIT {
+//% color="#51cbc7" icon="\u2B9A"
+namespace PTKidsBITVX {
     function initPCA(): void {
         let i2cData = pins.createBuffer(2)
         initI2C = true
@@ -219,38 +207,39 @@ namespace PTKidsBIT {
         pins.i2cWriteBuffer(PCA, i2cData, false)
     }
 
+    function analogWritePCA(channel: number, value: number): void {
+        if (initI2C == false) {
+            initPCA();
+        }
+
+        value = Math.max(0, Math.min(4095, value));
+        let onValue = 0;
+        let offValue = value;
+        let i2cData = pins.createBuffer(2);
+        i2cData[0] = SERVOS + channel * 4;
+        i2cData[1] = onValue & 0xff;
+        pins.i2cWriteBuffer(PCA, i2cData, false);
+
+        i2cData[0] = SERVOS + channel * 4 + 1;
+        i2cData[1] = (onValue >> 8) & 0xff;
+        pins.i2cWriteBuffer(PCA, i2cData, false);
+
+        i2cData[0] = SERVOS + channel * 4 + 2;
+        i2cData[1] = offValue & 0xff;
+        pins.i2cWriteBuffer(PCA, i2cData, false);
+
+        i2cData[0] = SERVOS + channel * 4 + 3;
+        i2cData[1] = (offValue >> 8) & 0xff;
+        pins.i2cWriteBuffer(PCA, i2cData, false);
+    }
+
     //% group="Motor Control"
     /**
      * Stop all Motor
      */
     //% block="Motor Stop"
     export function motorStop(): void {
-        if (Read_ADC_Version == false) {
-            let i2cData = pins.createBuffer(1)
-            i2cData[0] = 132
-            if (pins.i2cWriteBuffer(0x4b, i2cData, false) == 0) {
-                ADC_Version = 2
-            }
-            else {
-                ADC_Version = 1
-            }
-            Read_ADC_Version = true
-        }
-
-        if (ADC_Version == 1) {
-            // pins.digitalWritePin(DigitalPin.P13, 1)
-            // pins.analogWritePin(AnalogPin.P14, 0)
-            // pins.digitalWritePin(DigitalPin.P15, 1)
-            // pins.analogWritePin(AnalogPin.P16, 0)
-            motorGo(0, 0)
-        }
-        else if (ADC_Version == 2) {
-            // pins.analogWritePin(AnalogPin.P13, 1023)
-            // pins.analogWritePin(AnalogPin.P14, 1023)
-            // pins.analogWritePin(AnalogPin.P15, 1023)
-            // pins.analogWritePin(AnalogPin.P16, 1023)
-            motorGo(0, 0)
-        }
+        motorGo(0, 0, 0, 0)
     }
 
     //% group="Motor Control"
@@ -260,23 +249,11 @@ namespace PTKidsBIT {
     //% block="Spin %_Spin|Speed %Speed"
     //% speed.min=0 speed.max=100
     export function Spin(spin: _Spin, speed: number): void {
-        if (Read_ADC_Version == false) {
-            let i2cData = pins.createBuffer(1)
-            i2cData[0] = 132
-            if (pins.i2cWriteBuffer(0x4b, i2cData, false) == 0) {
-                ADC_Version = 2
-            }
-            else {
-                ADC_Version = 1
-            }
-            Read_ADC_Version = true
-        }
-
         if (spin == _Spin.Left) {
-            motorGo(-speed, speed)
+            motorGo(-speed, -speed, speed, speed)
         }
         else if (spin == _Spin.Right) {
-            motorGo(speed, -speed)
+            motorGo(speed, speed, -speed, -speed)
         }
     }
 
@@ -287,23 +264,11 @@ namespace PTKidsBIT {
     //% block="Turn %_Turn|Speed %Speed"
     //% speed.min=0 speed.max=100
     export function Turn(turn: _Turn, speed: number): void {
-        if (Read_ADC_Version == false) {
-            let i2cData = pins.createBuffer(1)
-            i2cData[0] = 132
-            if (pins.i2cWriteBuffer(0x4b, i2cData, false) == 0) {
-                ADC_Version = 2
-            }
-            else {
-                ADC_Version = 1
-            }
-            Read_ADC_Version = true
-        }
-        
         if (turn == _Turn.Left) {
-            motorGo(0, speed)
+            motorGo(0, 0, speed, speed)
         }
         else if (turn == _Turn.Right) {
-            motorGo(speed, 0)
+            motorGo(speed, speed, 0, 0)
         }
     }
 
@@ -311,77 +276,59 @@ namespace PTKidsBIT {
     /**
      * Control motors speed both at the same time. The speed motors is adjustable between -100 to 100.
      */
-    //% block="Motor1 %Motor1|Motor2 %Motor2"
+    //% block="Motor1 %Motor1|Motor2 %Motor2|Motor3 %Motor3|Motor4 %Motor4"
     //% speed1.min=-100 speed1.max=100
     //% speed2.min=-100 speed2.max=100
-    export function motorGo(speed1: number, speed2: number): void {
-        if (Read_ADC_Version == false) {
-            let i2cData = pins.createBuffer(1)
-            i2cData[0] = 132
-            if (pins.i2cWriteBuffer(0x4b, i2cData, false) == 0) {
-                ADC_Version = 2
-            }
-            else {
-                ADC_Version = 1
-            }
-            Read_ADC_Version = true
+    //% speed3.min=-100 speed3.max=100
+    //% speed4.min=-100 speed4.max=100
+    export function motorGo(speed1: number, speed2: number, speed3: number, speed4: number): void {
+        speed1 = pins.map(speed1, -100, 100, -1023, 1023)
+        speed2 = pins.map(speed2, -100, 100, -1023, 1023)
+        speed3 = pins.map(speed3, -100, 100, -1023, 1023)
+        speed4 = pins.map(speed4, -100, 100, -1023, 1023)
+
+        if (speed1 < 0) {
+            analogWritePCA(13, 0)
+            pins.analogWritePin(AnalogPin.P14, -speed1)
+            pins.analogSetPeriod(AnalogPin.P14, 2000)
+        }
+        else if (speed1 >= 0) {
+            analogWritePCA(13, 4095)
+            pins.analogWritePin(AnalogPin.P14, speed1)
+            pins.analogSetPeriod(AnalogPin.P14, 2000)
         }
 
-        if (ADC_Version == 1) {
-            speed1 = pins.map(speed1, -100, 100, -1023, 1023)
-            speed2 = pins.map(speed2, -100, 100, -1023, 1023)
-
-            if (speed1 < 0) {
-                pins.digitalWritePin(DigitalPin.P13, 0)
-                pins.analogWritePin(AnalogPin.P14, -speed1)
-                pins.analogSetPeriod(AnalogPin.P14, 2000)
-            }
-            else if (speed1 >= 0) {
-                pins.digitalWritePin(DigitalPin.P13, 1)
-                pins.analogWritePin(AnalogPin.P14, speed1)
-                pins.analogSetPeriod(AnalogPin.P14, 2000)
-            }
-
-            if (speed2 < 0) {
-                pins.digitalWritePin(DigitalPin.P15, 0)
-                pins.analogWritePin(AnalogPin.P16, -speed2)
-                pins.analogSetPeriod(AnalogPin.P16, 2000)
-            }
-            else if (speed2 >= 0) {
-                pins.digitalWritePin(DigitalPin.P15, 1)
-                pins.analogWritePin(AnalogPin.P16, speed2)
-                pins.analogSetPeriod(AnalogPin.P16, 2000)
-            }
+        if (speed2 < 0) {
+            analogWritePCA(12, 0)
+            pins.analogWritePin(AnalogPin.P13, -speed2)
+            pins.analogSetPeriod(AnalogPin.P13, 2000)
         }
-        else if (ADC_Version == 2) {
-            speed1 = pins.map(speed1, -100, 100, 1023, -1023)
-            speed2 = pins.map(speed2, -100, 100, 1023, -1023)
+        else if (speed2 >= 0) {
+            analogWritePCA(12, 4095)
+            pins.analogWritePin(AnalogPin.P13, speed2)
+            pins.analogSetPeriod(AnalogPin.P13, 2000)
+        }
 
-            if (speed1 < 0) {
-                pins.analogWritePin(AnalogPin.P13, 1023)
-                pins.analogWritePin(AnalogPin.P14, 1023 + speed1)
-                pins.analogSetPeriod(AnalogPin.P13, 200)
-                pins.analogSetPeriod(AnalogPin.P14, 200)
-            }
-            else if (speed1 >= 0) {
-                pins.analogWritePin(AnalogPin.P14, 1023)
-                pins.analogWritePin(AnalogPin.P13, 1023 - speed1)
-                pins.analogSetPeriod(AnalogPin.P14, 200)
-                pins.analogSetPeriod(AnalogPin.P13, 200)
-            }
+        if (speed3 < 0) {
+            analogWritePCA(14, 0)
+            pins.analogWritePin(AnalogPin.P16, -speed3)
+            pins.analogSetPeriod(AnalogPin.P16, 2000)
+        }
+        else if (speed3 >= 0) {
+            analogWritePCA(14, 4095)
+            pins.analogWritePin(AnalogPin.P16, speed3)
+            pins.analogSetPeriod(AnalogPin.P16, 2000)
+        }
 
-            if (speed2 < 0) {
-                pins.analogWritePin(AnalogPin.P15, 1023)
-                pins.analogWritePin(AnalogPin.P16, 1023 + speed2)
-                pins.analogSetPeriod(AnalogPin.P15, 200)
-                pins.analogSetPeriod(AnalogPin.P16, 200)
-            }
-            else if (speed2 >= 0) {
-                pins.analogWritePin(AnalogPin.P16, 1023)
-                pins.analogWritePin(AnalogPin.P15, 1023 - speed2)
-                pins.analogSetPeriod(AnalogPin.P16, 200)
-                pins.analogSetPeriod(AnalogPin.P15, 200)
-            }
+        if (speed4 < 0) {
+            analogWritePCA(15, 0)
+            pins.analogWritePin(AnalogPin.P15, -speed4)
+            pins.analogSetPeriod(AnalogPin.P15, 2000)
+        }
+        else if (speed4 >= 0) {
+            analogWritePCA(15, 4095)
+            pins.analogWritePin(AnalogPin.P15, speed4)
+            pins.analogSetPeriod(AnalogPin.P15, 2000)
         }
     }
 
@@ -392,132 +339,55 @@ namespace PTKidsBIT {
     //% block="motorWrite %Motor_Write|Speed %Speed"
     //% speed.min=-100 speed.max=100
     export function motorWrite(motor: Motor_Write, speed: number): void {
-        if (Read_ADC_Version == false) {
-            let i2cData = pins.createBuffer(1)
-            i2cData[0] = 132
-            if (pins.i2cWriteBuffer(0x4b, i2cData, false) == 0) {
-                ADC_Version = 2
-            }
-            else {
-                ADC_Version = 1
-            }
-            Read_ADC_Version = true
-        }
+        speed = pins.map(speed, -100, 100, -1023, 1023)
 
-        if (ADC_Version == 1) {
-            speed = pins.map(speed, -100, 100, -1023, 1023)
-
-            if (motor == Motor_Write.Motor_1) {
-                if (speed < 0) {
-                    pins.digitalWritePin(DigitalPin.P13, 0)
-                    pins.analogWritePin(AnalogPin.P14, -speed + 2)
-                    pins.analogSetPeriod(AnalogPin.P14, 2000)
-                }
-                else if (speed >= 0) {
-                    pins.digitalWritePin(DigitalPin.P13, 1)
-                    pins.analogWritePin(AnalogPin.P14, speed - 2)
-                    pins.analogSetPeriod(AnalogPin.P14, 2000)
-                }
+        if (motor == Motor_Write.Motor_1) {
+            if (speed < 0) {
+                analogWritePCA(13, 0)
+                pins.analogWritePin(AnalogPin.P14, -speed)
+                pins.analogSetPeriod(AnalogPin.P14, 2000)
             }
-            else if (motor == Motor_Write.Motor_2) {
-                if (speed < 0) {
-                    pins.digitalWritePin(DigitalPin.P15, 0)
-                    pins.analogWritePin(AnalogPin.P16, -speed)
-                    pins.analogSetPeriod(AnalogPin.P16, 2000)
-                }
-                else if (speed >= 0) {
-                    pins.digitalWritePin(DigitalPin.P15, 1)
-                    pins.analogWritePin(AnalogPin.P16, speed)
-                    pins.analogSetPeriod(AnalogPin.P16, 2000)
-                }
+            else if (speed >= 0) {
+                analogWritePCA(13, 4095)
+                pins.analogWritePin(AnalogPin.P14, speed)
+                pins.analogSetPeriod(AnalogPin.P14, 2000)
             }
         }
-        else if (ADC_Version == 2) {
-            speed = pins.map(speed, -100, 100, 1023, -1023)
-
-            if (motor == Motor_Write.Motor_1) {
-                if (speed < 0) {
-                    pins.analogWritePin(AnalogPin.P13, 1023)
-                    pins.analogWritePin(AnalogPin.P14, 1023 + speed)
-                    pins.analogSetPeriod(AnalogPin.P13, 200)
-                    pins.analogSetPeriod(AnalogPin.P14, 200)
-                }
-                else if (speed >= 0) {
-                    pins.analogWritePin(AnalogPin.P14, 1023)
-                    pins.analogWritePin(AnalogPin.P13, 1023 - speed)
-                    pins.analogSetPeriod(AnalogPin.P14, 200)
-                    pins.analogSetPeriod(AnalogPin.P13, 200)
-                }
+        else if (motor == Motor_Write.Motor_2) {
+            if (speed < 0) {
+                analogWritePCA(12, 0)
+                pins.analogWritePin(AnalogPin.P13, -speed)
+                pins.analogSetPeriod(AnalogPin.P13, 2000)
             }
-            else if (motor == Motor_Write.Motor_2) {
-                if (speed < 0) {
-                    pins.analogWritePin(AnalogPin.P15, 1023)
-                    pins.analogWritePin(AnalogPin.P16, 1023 + speed)
-                    pins.analogSetPeriod(AnalogPin.P15, 200)
-                    pins.analogSetPeriod(AnalogPin.P16, 200)
-                }
-                else if (speed >= 0) {
-                    pins.analogWritePin(AnalogPin.P16, 1023)
-                    pins.analogWritePin(AnalogPin.P15, 1023 - speed)
-                    pins.analogSetPeriod(AnalogPin.P16, 200)
-                    pins.analogSetPeriod(AnalogPin.P15, 200)
-                }
+            else if (speed >= 0) {
+                analogWritePCA(12, 4095)
+                pins.analogWritePin(AnalogPin.P13, speed)
+                pins.analogSetPeriod(AnalogPin.P13, 2000)
             }
         }
-    }
-
-    //% group="Servo Control"
-    /**
-     * Control Servo Motor to Release Mode
-     */
-    //% block="Servo Stop %Servo_Write"
-    export function servoStop(servo: Servo_Write): void {
-        if (servo == Servo_Write.P8) {
-            pins.analogWritePin(AnalogPin.P8, 1)
+        else if (motor == Motor_Write.Motor_3) {
+            if (speed < 0) {
+                analogWritePCA(14, 0)
+                pins.analogWritePin(AnalogPin.P16, -speed)
+                pins.analogSetPeriod(AnalogPin.P16, 2000)
+            }
+            else if (speed >= 0) {
+                analogWritePCA(14, 4095)
+                pins.analogWritePin(AnalogPin.P16, speed)
+                pins.analogSetPeriod(AnalogPin.P16, 2000)
+            }
         }
-        else if (servo == Servo_Write.P12) {
-            pins.analogWritePin(AnalogPin.P12, 1)
-        }
-    }
-
-    //% group="Servo Control"
-    /**
-     * Control Servo Motor 0 - 180 Degrees and Lock or Release Mode
-     */
-    //% block="Servo %Servo_Write|Degree %Degree|Mode %Servo_Mode"
-    //% degree.min=0 degree.max=180
-    export function servoWrite(servo: Servo_Write, degree: number, mode: Servo_Mode): void {
-        if (servo == Servo_Write.P8) {
-            if (mode == Servo_Mode.Lock) {
-                pins.servoWritePin(AnalogPin.P8, degree)
+        else if (motor == Motor_Write.Motor_4) {
+            if (speed < 0) {
+                analogWritePCA(15, 0)
+                pins.analogWritePin(AnalogPin.P15, -speed)
+                pins.analogSetPeriod(AnalogPin.P15, 2000)
             }
-            else if (mode == Servo_Mode.Release) {
-                pins.servoWritePin(AnalogPin.P8, degree)
-                if (Math.abs(degree - last_degree_P8) * 5 < 100) {
-                    basic.pause(100)
-                }
-                else {
-                    basic.pause(Math.abs(degree - last_degree_P8) * 5)
-                }
-                pins.analogWritePin(AnalogPin.P8, 1)
+            else if (speed >= 0) {
+                analogWritePCA(15, 4095)
+                pins.analogWritePin(AnalogPin.P15, speed)
+                pins.analogSetPeriod(AnalogPin.P15, 2000)
             }
-            last_degree_P8 = degree
-        }
-        else if (servo == Servo_Write.P12) {
-            if (mode == Servo_Mode.Lock) {
-                pins.servoWritePin(AnalogPin.P12, degree)
-            }
-            else if (mode == Servo_Mode.Release) {
-                pins.servoWritePin(AnalogPin.P12, degree)
-                if (Math.abs(degree - last_degree_P12) * 5 < 100) {
-                    basic.pause(100)
-                }
-                else {
-                    basic.pause(Math.abs(degree - last_degree_P12) * 5)
-                }
-                pins.analogWritePin(AnalogPin.P12, 1)
-            }
-            last_degree_P12 = degree
         }
     }
 
@@ -527,37 +397,29 @@ namespace PTKidsBIT {
      */
     //% block="Servo %Servo_Write|Degree %Degree"
     //% degree.min=0 degree.max=180
-    export function servoWrite2(servo: Servo_Write2, degree: number): void {
-        if (servo == Servo_Write2.P8) {
-            pins.servoWritePin(AnalogPin.P8, degree)
-            last_degree_P8 = degree
-        }
-        else if (servo == Servo_Write2.P12) {
-            pins.servoWritePin(AnalogPin.P12, degree)
-            last_degree_P12 = degree
-        }
-        else if (servo == Servo_Write2.S0) {
+    export function servoWrite(servo: Servo_Write, degree: number): void {
+        if (servo == Servo_Write.S0) {
             setServoPCA(0, degree)
         }
-        else if (servo == Servo_Write2.S1) {
+        else if (servo == Servo_Write.S1) {
             setServoPCA(1, degree)
         }
-        else if (servo == Servo_Write2.S2) {
+        else if (servo == Servo_Write.S2) {
             setServoPCA(2, degree)
         }
-        else if (servo == Servo_Write2.S3) {
+        else if (servo == Servo_Write.S3) {
             setServoPCA(3, degree)
         }
-        else if (servo == Servo_Write2.S4) {
+        else if (servo == Servo_Write.S4) {
             setServoPCA(4, degree)
         }
-        else if (servo == Servo_Write2.S5) {
+        else if (servo == Servo_Write.S5) {
             setServoPCA(5, degree)
         }
-        else if (servo == Servo_Write2.S6) {
+        else if (servo == Servo_Write.S6) {
             setServoPCA(6, degree)
         }
-        else if (servo == Servo_Write2.S7) {
+        else if (servo == Servo_Write.S7) {
             setServoPCA(7, degree)
         }
     }
@@ -629,29 +491,8 @@ namespace PTKidsBIT {
      */
     //% block="ADCRead %ADC_Read"
     export function ADCRead(ADCRead: ADC_Read): number {
-        if (Read_ADC_Version == false) {
-            let i2cData = pins.createBuffer(1)
-            i2cData[0] = 132
-            if (pins.i2cWriteBuffer(0x4b, i2cData, false) == 0) {
-                ADC_Version = 2
-            }
-            else {
-                ADC_Version = 1
-            }
-            Read_ADC_Version = true
-        }
-
-        if (ADC_Version == 1) {
-            pins.i2cWriteNumber(0x48, ADCRead, NumberFormat.UInt8LE, false)
-            return ADCRead = pins.i2cReadNumber(0x48, NumberFormat.UInt16BE, false)
-        }
-        else if (ADC_Version == 2) {
-            pins.i2cWriteNumber(0x4b, ADCRead, NumberFormat.UInt8LE, false)
-            return ADCRead = pins.i2cReadNumber(0x4b, NumberFormat.UInt8LE, false)
-        }
-        else {
-            return 0
-        }
+        pins.i2cWriteNumber(0x48, ADCRead, NumberFormat.UInt8LE, false)
+        return ADCRead = pins.i2cReadNumber(0x48, NumberFormat.UInt16BE, false)
     }
 
     //% group="Sensor and ADC"
@@ -732,10 +573,10 @@ namespace PTKidsBIT {
             }
 
             if (turn == Turn_Line.Left) {
-                motorGo(-speed, speed)
+                motorGo(-speed, -speed, speed, speed)
             }
             else if (turn == Turn_Line.Right) {
-                motorGo(speed, -speed)
+                motorGo(speed, speed, -speed, -speed)
             }
         }
         timer = control.millis()
@@ -757,10 +598,10 @@ namespace PTKidsBIT {
                 }
 
                 if (turn == Turn_Line.Left) {
-                    motorGo(-motor_speed, motor_speed)
+                    motorGo(-motor_speed, -motor_speed, motor_speed, motor_speed)
                 }
                 else if (turn == Turn_Line.Right) {
-                    motorGo(motor_speed, -motor_speed)
+                    motorGo(motor_speed, motor_speed, -motor_speed, -motor_speed)
                 }
             }
         }
@@ -802,10 +643,10 @@ namespace PTKidsBIT {
             }
 
             if (direction == Forward_Direction.Forward) {
-                motorGo(left_motor_speed, right_motor_speed)
+                motorGo(left_motor_speed, left_motor_speed, right_motor_speed, right_motor_speed)
             }
             else {
-                motorGo(-left_motor_speed, -right_motor_speed)
+                motorGo(-left_motor_speed, -left_motor_speed, -right_motor_speed, -right_motor_speed)
             }
         }
         motorStop()
@@ -898,18 +739,18 @@ namespace PTKidsBIT {
 
             if (direction == Forward_Direction.Forward) {
                 if (last_center > 0) {
-                    motorGo(left_motor_speed, right_motor_speed)
+                    motorGo(left_motor_speed, left_motor_speed, right_motor_speed, right_motor_speed)
                 }
                 else {
-                    motorGo(min_speed, min_speed)
+                    motorGo(min_speed, min_speed, min_speed, min_speed)
                 }
             }
             else {
                 if (last_center > 0) {
-                    motorGo(-left_motor_speed, -right_motor_speed)
+                    motorGo(-left_motor_speed, -left_motor_speed, -right_motor_speed, -right_motor_speed)
                 }
                 else {
-                    motorGo(-min_speed, -min_speed)
+                    motorGo(-min_speed, -min_speed, -min_speed, -min_speed)
                 }
             }
 
@@ -938,10 +779,10 @@ namespace PTKidsBIT {
             }
             else if (line_state == 1) {
                 if (direction == Forward_Direction.Forward) {
-                    motorGo(min_speed, min_speed)
+                    motorGo(min_speed, min_speed, min_speed, min_speed)
                 }
                 else {
-                    motorGo(-min_speed, -min_speed)
+                    motorGo(-min_speed, -min_speed, -min_speed, -min_speed)
                 }
                 while (1) {
                     for (let i = 0; i < Sensor_Left.length; i++) {
@@ -975,10 +816,10 @@ namespace PTKidsBIT {
                 if (find == Find_Line.Left) {
                     if (found_left == Sensor_Left.length && found_right != Sensor_Right.length) {
                         if (direction == Forward_Direction.Forward) {
-                            motorGo(-100, -100)
+                            motorGo(-100, -100, -100, -100)
                         }
                         else {
-                            motorGo(100, 100)
+                            motorGo(100, 100, 100, 100)
                         }
                         basic.pause(break_time)
                         motorStop()
@@ -993,10 +834,10 @@ namespace PTKidsBIT {
                 else if (find == Find_Line.Center) {
                     if (found_left == Sensor_Left.length && found_right == Sensor_Right.length) {
                         if (direction == Forward_Direction.Forward) {
-                            motorGo(-100, -100)
+                            motorGo(-100, -100, -100, -100)
                         }
                         else {
-                            motorGo(100, 100)
+                            motorGo(100, 100, 100, 100)
                         }
                         basic.pause(break_time)
                         motorStop()
@@ -1011,10 +852,10 @@ namespace PTKidsBIT {
                 else if (find == Find_Line.Right) {
                     if (found_left != Sensor_Left.length && found_right == Sensor_Right.length) {
                         if (direction == Forward_Direction.Forward) {
-                            motorGo(-100, -100)
+                            motorGo(-100, -100, -100, -100)
                         }
                         else {
-                            motorGo(100, 100)
+                            motorGo(100, 100, 100, 100)
                         }
                         basic.pause(break_time)
                         motorStop()
@@ -1061,7 +902,7 @@ namespace PTKidsBIT {
             right_motor_speed = -max_speed
         }
 
-        motorGo(left_motor_speed, right_motor_speed)
+        motorGo(left_motor_speed, left_motor_speed, right_motor_speed, right_motor_speed)
     }
 
     //% group="Line Follower"
