@@ -34,6 +34,17 @@ let last_degree_P12 = 0;
 let distance = 0
 let timer = 0
 
+let BNO055_I2C_ADDR = 0x29
+let BNO055_OPR_MODE = 0x3D
+let OPERATION_MODE_NDOF = 0x0C
+let EULER_R_LSB = 0x1C
+let EULER_R_MSB = 0x1D
+let EULER_P_LSB = 0x1E
+let EULER_P_MSB = 0x1F
+let EULER_Y_LSB = 0x1A
+let EULER_Y_MSB = 0x1B
+let initIMU = false
+
 enum Motor_Write {
     //% block="1"
     Motor_1,
@@ -60,10 +71,6 @@ enum _Spin {
 }
 
 enum Servo_Write {
-    //% block="P8"
-    P8,
-    //% block="P12"
-    P12,
     //% block="S0"
     S0,
     //% block="S1"
@@ -162,6 +169,15 @@ enum Turn_Line {
     Right
 }
 
+enum Angle {
+    //% block="Roll"
+    Roll,
+    //% block="Pitch"
+    Pitch,
+    //% block="Yaw"
+    Yaw
+}
+
 //% color="#51cbc7" icon="\u2B9A"
 namespace PTKidsBITVX {
     function initPCA(): void {
@@ -233,12 +249,52 @@ namespace PTKidsBITVX {
         pins.i2cWriteBuffer(PCA, i2cData, false);
     }
 
+    function initBNO055() {
+        pins.i2cWriteNumber(
+            BNO055_I2C_ADDR,
+            (BNO055_OPR_MODE << 8) | 0x00,
+            NumberFormat.UInt16BE,
+            false
+        )
+        basic.pause(10)
+        pins.i2cWriteNumber(
+            BNO055_I2C_ADDR,
+            (BNO055_OPR_MODE << 8) | OPERATION_MODE_NDOF,
+            NumberFormat.UInt16BE,
+            false
+        )
+        basic.pause(10)
+    }
+
+    function read16BitRegister(lsb: number, msb: number): number {
+        pins.i2cWriteNumber(BNO055_I2C_ADDR, lsb, NumberFormat.UInt8BE)
+        let lsbValue = pins.i2cReadNumber(BNO055_I2C_ADDR, NumberFormat.UInt8BE)
+        pins.i2cWriteNumber(BNO055_I2C_ADDR, msb, NumberFormat.UInt8BE)
+        let msbValue = pins.i2cReadNumber(BNO055_I2C_ADDR, NumberFormat.UInt8BE)
+        return (msbValue << 8) | lsbValue
+    }
+
+    function getNormalizedOrientation(angles: number, offset: number): number {
+        let adjustedYaw = angles - offset
+        while (adjustedYaw > 180) {
+            adjustedYaw -= 360
+        }
+        while (adjustedYaw < -180) {
+            adjustedYaw += 360
+        }
+        return adjustedYaw
+    }
+
     //% group="Motor Control"
     /**
      * Stop all Motor
      */
     //% block="Motor Stop"
     export function motorStop(): void {
+        pins.analogWritePin(AnalogPin.P14, 0)
+        pins.analogWritePin(AnalogPin.P13, 0)
+        pins.analogWritePin(AnalogPin.P16, 0)
+        pins.analogWritePin(AnalogPin.P15, 0)
         motorGo(0, 0, 0, 0)
     }
 
@@ -422,6 +478,29 @@ namespace PTKidsBITVX {
         else if (servo == Servo_Write.S7) {
             setServoPCA(7, degree)
         }
+    }
+
+    //% group="Sensor and ADC"
+    /**
+     * Read Angles from IMU
+     */
+    //% block="AnglesRead %Angle|Offset %Offset"
+    //% offset.min=-180 offset.max=180
+    export function anglesRead(anglesRead: Angle, offset: number): number {
+        if (initIMU == false) {
+            initBNO055()
+            initIMU = true
+        }
+        if (anglesRead == Angle.Roll) {
+            return getNormalizedOrientation(read16BitRegister(EULER_R_LSB, EULER_R_MSB) / 16, offset)
+        }
+        else if (anglesRead == Angle.Pitch) {
+            return getNormalizedOrientation(read16BitRegister(EULER_P_LSB, EULER_P_MSB) / 16, offset)
+        }
+        else if (anglesRead == Angle.Yaw) {
+            return getNormalizedOrientation(read16BitRegister(EULER_Y_LSB, EULER_Y_MSB) / 16, offset)
+        }
+        return 0
     }
 
     //% group="Sensor and ADC"
