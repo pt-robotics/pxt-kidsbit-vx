@@ -36,6 +36,10 @@ let timer = 0
 
 let BNO055_I2C_ADDR = 0x29
 let BNO055_OPR_MODE = 0x3D
+let OPERATION_MODE_GYRONLY = 0X03
+let OPERATION_MODE_ACCGYRO = 0X05
+let OPERATION_MODE_IMUPLUS = 0X08
+let OPERATION_MODE_NDOF_FMC_OFF = 0X0B
 let OPERATION_MODE_NDOF = 0x0C
 let EULER_R_LSB = 0x1C
 let EULER_R_MSB = 0x1D
@@ -259,11 +263,11 @@ namespace PTKidsBITVX {
         basic.pause(10)
         pins.i2cWriteNumber(
             BNO055_I2C_ADDR,
-            (BNO055_OPR_MODE << 8) | OPERATION_MODE_NDOF,
+            (BNO055_OPR_MODE << 8) | OPERATION_MODE_IMUPLUS,
             NumberFormat.UInt16BE,
             false
         )
-        basic.pause(10)
+        basic.pause(1000)
     }
 
     function read16BitRegister(lsb: number, msb: number): number {
@@ -343,6 +347,15 @@ namespace PTKidsBITVX {
         speed3 = pins.map(speed3, -100, 100, -1023, 1023)
         speed4 = pins.map(speed4, -100, 100, -1023, 1023)
 
+        if (speed1 < -1023) speed1 = -1023
+        else if (speed1 > 1023) speed1 = 1023
+        if (speed2 < -1023) speed2 = -1023
+        else if (speed2 > 1023) speed2 = 1023
+        if (speed3 < -1023) speed3 = -1023
+        else if (speed3 > 1023) speed3 = 1023
+        if (speed4 < -1023) speed4 = -1023
+        else if (speed4 > 1023) speed4 = 1023
+
         if (speed1 < 0) {
             analogWritePCA(13, 0)
             pins.analogWritePin(AnalogPin.P14, -speed1)
@@ -396,6 +409,9 @@ namespace PTKidsBITVX {
     //% speed.min=-100 speed.max=100
     export function motorWrite(motor: Motor_Write, speed: number): void {
         speed = pins.map(speed, -100, 100, -1023, 1023)
+
+        if (speed < -1023) speed = -1023
+        else if (speed > 1023) speed = 1023
 
         if (motor == Motor_Write.Motor_1) {
             if (speed < 0) {
