@@ -11,8 +11,6 @@ The package adds support [PTKidsBIT](http://www.ptbot-shop.com/product/28/pt-bot
 * ``P0``  -- Connected to Buzzer
 * ``P1``  -- Digital Input/Output and Analog Input/Output
 * ``P2``  -- Digital Input/Output and Analog Input/Output
-* ``P8``  -- Digital Input/Output, Analog Input/Output and Servo1
-* ``P12`` -- Digital Input/Output, Analog Input/Output and Servo2
 * ``P13`` -- DigitalWrite Pin for DC motor control direction 1
 * ``P14`` -- AnalogWrite Pin for DC motor speed control 1
 * ``P15`` -- DigitalWrite Pin for DC motor control direction 2
