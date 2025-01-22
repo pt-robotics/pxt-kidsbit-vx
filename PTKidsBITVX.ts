@@ -314,10 +314,10 @@ namespace PTKidsBITVX {
     //% time.shadow="timePicker"
     //% time.defl=500
     //% min_speed.defl=70
-    //% max_speed.defl=200
+    //% max_speed.defl=100
     //% kp.defl=2
     //% kd.defl=1
-    export function goWithDegrees(direction: Forward_Direction, time: number, degrees: number, min_speed: number, max_speed: number, kp: number, kd: number) {
+    export function goWithDegreesTime(direction: Forward_Direction, time: number, degrees: number, min_speed: number, max_speed: number, kp: number, kd: number) {
         let timer = control.millis()
         previous_error = 0
         while (control.millis() - timer < time) {
@@ -361,6 +361,55 @@ namespace PTKidsBITVX {
 
     //% group="Motor Control"
     /**
+     * Forward or Backward with degrees.
+     */
+    //% block="Direction %Forward_Direction|Degrees\n\n %degrees|Min Speed %min_speed|Max Speed %max_speed|KP %kp|KD %kd"
+    //% degrees.min=-180 degrees.max=180
+    //% min_speed.min=0 min_speed.max=100
+    //% max_speed.min=0 max_speed.max=100
+    //% min_speed.defl=70
+    //% max_speed.defl=100
+    //% kp.defl=2
+    //% kd.defl=1
+    export function goWithDegrees(direction: Forward_Direction, degrees: number, min_speed: number, max_speed: number, kp: number, kd: number) {
+        error = degrees - anglesRead(Angle.Yaw)
+        if (error > 180) {
+            error += 0 - 360
+        } else if (error < -180) {
+            error += 360
+        }
+        P = error
+        D = error - previous_error
+        PD_Value = (kp * P) + (kd * D)
+        previous_error = error
+
+        left_motor_speed = min_speed + PD_Value
+        right_motor_speed = min_speed - PD_Value
+
+        if (left_motor_speed > max_speed) {
+            left_motor_speed = max_speed
+        }
+        else if (left_motor_speed < -max_speed) {
+            left_motor_speed = -max_speed
+        }
+
+        if (right_motor_speed > max_speed) {
+            right_motor_speed = max_speed
+        }
+        else if (right_motor_speed < -max_speed) {
+            right_motor_speed = -max_speed
+        }
+
+        if (direction == Forward_Direction.Forward) {
+            motorGo(left_motor_speed, left_motor_speed, right_motor_speed, right_motor_speed)
+        }
+        else {
+            motorGo(-right_motor_speed, -right_motor_speed, -left_motor_speed, -left_motor_speed)
+        }
+    }
+
+    //% group="Motor Control"
+    /**
      * Spin the Robot to Degrees.
      */
     //% block="spinDegrees %degrees|Low Degrees %low_degrees|Min Speed\n\n %min_speed|Max Speed\n\n %max_speed"
@@ -369,8 +418,8 @@ namespace PTKidsBITVX {
     //% min_speed.min=10 min_speed.max=100
     //% max_speed.min=10 max_speed.max=100
     //% degrees.defl=90
-    //% low_degrees.defl=70
-    //% min_speed.defl=10
+    //% low_degrees.defl=80
+    //% min_speed.defl=20
     //% max_speed.defl=100
     export function spinDegrees(degrees: number, low_degrees: number, min_speed: number, max_speed: number): void {
         if (initIMU == false) {
@@ -421,8 +470,8 @@ namespace PTKidsBITVX {
     //% min_speed.min=10 min_speed.max=100
     //% max_speed.min=10 max_speed.max=100
     //% degrees.defl=90
-    //% low_degrees.defl=50
-    //% min_speed.defl=10
+    //% low_degrees.defl=80
+    //% min_speed.defl=20
     //% max_speed.defl=100
     export function turnDegrees(degrees: number, low_degrees: number, min_speed: number, max_speed: number): void {
         if (initIMU == false) {
@@ -775,6 +824,7 @@ namespace PTKidsBITVX {
     //% block="ADCRead %ADC_Read"
     export function ADCRead(ADCRead: ADC_Read): number {
         pins.i2cWriteNumber(0x48, ADCRead, NumberFormat.UInt8LE, false)
+        basic.pause(10)
         return ADCRead = pins.i2cReadNumber(0x48, NumberFormat.UInt16BE, false)
     }
 
