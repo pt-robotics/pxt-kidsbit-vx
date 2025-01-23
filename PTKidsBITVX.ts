@@ -307,7 +307,7 @@ namespace PTKidsBITVX {
     /**
      * Forward or Backward with degrees.
      */
-    //% block="Direction %Forward_Direction|Time %time|Degrees\n\n %degrees|Min Speed %min_speed|Max Speed %max_speed|KP %kp|KD %kd"
+    //% block="Direction %Forward_Direction|Time %time|Go Degree %degrees|Min Speed %min_speed|Max Speed %max_speed|KP %kp|KD %kd"
     //% degrees.min=-180 degrees.max=180
     //% min_speed.min=0 min_speed.max=100
     //% max_speed.min=0 max_speed.max=100
@@ -363,7 +363,7 @@ namespace PTKidsBITVX {
     /**
      * Forward or Backward with degrees.
      */
-    //% block="Direction %Forward_Direction|Degrees\n\n %degrees|Min Speed %min_speed|Max Speed %max_speed|KP %kp|KD %kd"
+    //% block="Direction %Forward_Direction|Go Degree %degrees|Min Speed %min_speed|Max Speed %max_speed|KP %kp|KD %kd"
     //% degrees.min=-180 degrees.max=180
     //% min_speed.min=0 min_speed.max=100
     //% max_speed.min=0 max_speed.max=100
@@ -412,7 +412,7 @@ namespace PTKidsBITVX {
     /**
      * Spin the Robot to Degrees.
      */
-    //% block="spinDegrees %degrees|Low Degrees %low_degrees|Min Speed\n\n %min_speed|Max Speed\n\n %max_speed"
+    //% block="Spin Degree %degrees|Low Degree\n %low_degrees|Min Speed\n\n %min_speed|Max Speed\n\n %max_speed"
     //% degrees.min=-180 degrees.max=180
     //% low_degrees.min=0 low_degrees.max=180
     //% min_speed.min=10 min_speed.max=100
@@ -464,16 +464,16 @@ namespace PTKidsBITVX {
     /**
      * Turn the Robot to Degrees.
      */
-    //% block="turnDegrees %degrees|Low Degrees %low_degrees|Min Speed\n\n %min_speed|Max Speed\n\n %max_speed"
+    //% block="Direction\n\n %Forward_Direction|Turn Degree %degrees|Low Degree\n %low_degrees|Min Speed\n\n %min_speed|Max Speed\n\n %max_speed"
     //% degrees.min=-180 degrees.max=180
     //% low_degrees.min=0 low_degrees.max=180
     //% min_speed.min=10 min_speed.max=100
     //% max_speed.min=10 max_speed.max=100
     //% degrees.defl=90
-    //% low_degrees.defl=80
+    //% low_degrees.defl=45
     //% min_speed.defl=20
     //% max_speed.defl=100
-    export function turnDegrees(degrees: number, low_degrees: number, min_speed: number, max_speed: number): void {
+    export function turnDegrees(direction: Forward_Direction, degrees: number, low_degrees: number, min_speed: number, max_speed: number): void {
         if (initIMU == false) {
             initBNO055()
             initIMU = true
@@ -493,10 +493,10 @@ namespace PTKidsBITVX {
 
             if (Math.abs(error_yaw) < low_degrees) {
                 if (error_yaw < -0.3) {
-                    motorGo(-min_speed, -min_speed, min_speed, min_speed)
+                    motorGo(min_speed / 4, min_speed / 4, min_speed, min_speed)
                 }
                 else if (error_yaw > 0.3) {
-                    motorGo(min_speed, min_speed, -min_speed, -min_speed)
+                    motorGo(min_speed, min_speed, min_speed / 4, min_speed / 4)
                 }
                 else {
                     motorStop()
@@ -505,9 +505,9 @@ namespace PTKidsBITVX {
             }
             else {
                 if (error_yaw < 0) {
-                    motorGo(0, 0, -pd_value, -pd_value)
+                    motorGo(min_speed / 4, min_speed / 4, -pd_value, -pd_value)
                 } else if (error_yaw > 0) {
-                    motorGo(pd_value, pd_value, 0, 0)
+                    motorGo(pd_value, pd_value, min_speed / 4, min_speed / 4)
                 }
                 timer_turn = control.millis()
             }
@@ -623,7 +623,7 @@ namespace PTKidsBITVX {
     /**
      * Control motor speed 1 channel. The speed motor is adjustable between -100 to 100.
      */
-    //% block="motorWrite %Motor_Write|Speed %Speed"
+    //% block="Motor %Motor_Write|Speed %Speed"
     //% speed.min=-100 speed.max=100
     //% speed.defl=50
     export function motorWrite(motor: Motor_Write, speed: number): void {
@@ -720,7 +720,7 @@ namespace PTKidsBITVX {
     /**
      * Read Angles from IMU
      */
-    //% block="AnglesRead %Angle"
+    //% block="Read Angle %Angle"
     //% offset.min=-180 offset.max=180
     export function anglesRead(anglesRead: Angle): number {
         if (initIMU == false) {
@@ -743,7 +743,7 @@ namespace PTKidsBITVX {
     /**
      * Set IMU offset to 0
      */
-    //% block="setAngleOffset %Angle"
+    //% block="Set Angle Offset %Angle"
     export function setAngleOffset(setAngles: Angle): void {
         if (setAngles == Angle.Roll) {
             angle_offset[0] = getNormalizedOrientation(read16BitRegister(EULER_R_LSB, EULER_R_MSB) / 16, 0)
@@ -760,7 +760,7 @@ namespace PTKidsBITVX {
     /**
      * Read Distance from Ultrasonic Sensor
      */
-    //% block="GETDistance Triger %Trigger_PIN|Echo %Echo_PIN"
+    //% block="Read Distance Triger %Trigger_PIN|Echo %Echo_PIN"
     //% Echo_PIN.defl=Ultrasonic_PIN.P2
     export function distanceRead(Trigger_PIN: Ultrasonic_PIN, Echo_PIN: Ultrasonic_PIN): number {
         let duration
@@ -821,48 +821,11 @@ namespace PTKidsBITVX {
     /**
      * Read Analog from ADC Channel
      */
-    //% block="ADCRead %ADC_Read"
+    //% block="Read ADC %ADC_Read"
     export function ADCRead(ADCRead: ADC_Read): number {
         pins.i2cWriteNumber(0x48, ADCRead, NumberFormat.UInt8LE, false)
         basic.pause(10)
         return ADCRead = pins.i2cReadNumber(0x48, NumberFormat.UInt16BE, false)
-    }
-
-    //% group="Sensor and ADC"
-    /**
-     * Wait for the button to be pressed or released.
-     */
-    //% block="WaitButton %Button_Pin|is %Button_Status"
-    //% speed.min=-100 speed.max=100
-    export function waitClick(button_pin: Button_Pin, button_status: Button_Status): void {
-        if (button_status == Button_Status.Pressed) {
-            if (button_pin == Button_Pin.P1) {
-                while (pins.digitalReadPin(DigitalPin.P1) == 0);
-            }
-            else if (button_pin == Button_Pin.P2) {
-                while (pins.digitalReadPin(DigitalPin.P2) == 0);
-            }
-            else if (button_pin == Button_Pin.P8) {
-                while (pins.digitalReadPin(DigitalPin.P8) == 0);
-            }
-            else if (button_pin == Button_Pin.P12) {
-                while (pins.digitalReadPin(DigitalPin.P12) == 0);
-            }
-        }
-        else {
-            if (button_pin == Button_Pin.P1) {
-                while (pins.digitalReadPin(DigitalPin.P1) == 1);
-            }
-            else if (button_pin == Button_Pin.P2) {
-                while (pins.digitalReadPin(DigitalPin.P2) == 1);
-            }
-            else if (button_pin == Button_Pin.P8) {
-                while (pins.digitalReadPin(DigitalPin.P8) == 1);
-            }
-            else if (button_pin == Button_Pin.P12) {
-                while (pins.digitalReadPin(DigitalPin.P12) == 1);
-            }
-        }
     }
 
     //% group="Line Follower"
