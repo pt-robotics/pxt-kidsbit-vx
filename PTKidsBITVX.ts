@@ -493,10 +493,12 @@ namespace PTKidsBITVX {
 
             if (Math.abs(error_yaw) < low_degrees) {
                 if (error_yaw < -0.3) {
-                    motorGo(min_speed / 4, min_speed / 4, min_speed, min_speed)
+                    if (direction == Forward_Direction.Forward) motorGo(min_speed / 4, min_speed / 4, min_speed, min_speed)
+                    else if (direction == Forward_Direction.Backward) motorGo(-min_speed, -min_speed, -min_speed / 4, -min_speed / 4)
                 }
                 else if (error_yaw > 0.3) {
-                    motorGo(min_speed, min_speed, min_speed / 4, min_speed / 4)
+                    if (direction == Forward_Direction.Forward) motorGo(min_speed, min_speed, min_speed / 4, min_speed / 4)
+                    else if (direction == Forward_Direction.Backward) motorGo(-min_speed / 4, -min_speed / 4, -min_speed, -min_speed)
                 }
                 else {
                     motorStop()
@@ -505,9 +507,11 @@ namespace PTKidsBITVX {
             }
             else {
                 if (error_yaw < 0) {
-                    motorGo(min_speed / 4, min_speed / 4, -pd_value, -pd_value)
+                    if (direction == Forward_Direction.Forward) motorGo(min_speed / 4, min_speed / 4, -pd_value, -pd_value)
+                    else if (direction == Forward_Direction.Backward) motorGo(pd_value, pd_value, -min_speed / 4, -min_speed / 4)
                 } else if (error_yaw > 0) {
-                    motorGo(pd_value, pd_value, min_speed / 4, min_speed / 4)
+                    if (direction == Forward_Direction.Forward) motorGo(pd_value, pd_value, min_speed / 4, min_speed / 4)
+                    else if (direction == Forward_Direction.Backward) motorGo(-min_speed / 4, -min_speed / 4, -pd_value, -pd_value)
                 }
                 timer_turn = control.millis()
             }
