@@ -862,7 +862,7 @@ namespace PTKidsBITVX {
         while (1) {
             on_line = 0
             for (let i = 0; i < Sensor_PIN.length; i++) {
-                if ((pins.map(ADCRead(ADC_PIN[Sensor_PIN[i]]), Color_Line[i], Color_Background[i], 1000, 0)) >= 800) {
+                if ((pins.map(ADCRead(ADC_PIN[Sensor_PIN[i]]), Color_Line[i], Color_Background[i], 1000, 0)) >= 500) {
                     on_line += 1;
                 }
             }
@@ -880,7 +880,7 @@ namespace PTKidsBITVX {
         }
         timer = control.millis()
         while (1) {
-            if ((pins.map(ADCRead(ADC_PIN[Sensor_PIN[adc_sensor_pin]]), Color_Line[adc_sensor_pin], Color_Background[adc_sensor_pin], 1000, 0)) >= 800) {
+            if ((pins.map(ADCRead(ADC_PIN[Sensor_PIN[adc_sensor_pin]]), Color_Line[adc_sensor_pin], Color_Background[adc_sensor_pin], 1000, 0)) >= 500) {
                 basic.pause(break_delay)
                 motorStop()
                 break
@@ -1059,7 +1059,7 @@ namespace PTKidsBITVX {
             last_center = 0
 
             for (let i = 0; i < Sensor_Left.length; i++) {
-                if ((pins.map(ADCRead(ADC_PIN[Sensor_Left[i]]), Color_Line_Left[i], Color_Background_Left[i], 1000, 0)) >= 800) {
+                if ((pins.map(ADCRead(ADC_PIN[Sensor_Left[i]]), Color_Line_Left[i], Color_Background_Left[i], 1000, 0)) >= 500) {
                     if (found_left < Sensor_Left.length) {
                         found_left += 1
                     }
@@ -1067,7 +1067,7 @@ namespace PTKidsBITVX {
             }
 
             for (let i = 0; i < Sensor_Right.length; i++) {
-                if ((pins.map(ADCRead(ADC_PIN[Sensor_Right[i]]), Color_Line_Right[i], Color_Background_Right[i], 1000, 0)) >= 800) {
+                if ((pins.map(ADCRead(ADC_PIN[Sensor_Right[i]]), Color_Line_Right[i], Color_Background_Right[i], 1000, 0)) >= 500) {
                     if (found_right < Sensor_Right.length) {
                         found_right += 1
                     }
@@ -1088,7 +1088,7 @@ namespace PTKidsBITVX {
                 }
                 while (1) {
                     for (let i = 0; i < Sensor_Left.length; i++) {
-                        if ((pins.map(ADCRead(ADC_PIN[Sensor_Left[i]]), Color_Line_Left[i], Color_Background_Left[i], 1000, 0)) >= 800) {
+                        if ((pins.map(ADCRead(ADC_PIN[Sensor_Left[i]]), Color_Line_Left[i], Color_Background_Left[i], 1000, 0)) >= 500) {
                             last_left += 1
                             if (found_left < Sensor_Left.length) {
                                 found_left += 1
@@ -1097,7 +1097,7 @@ namespace PTKidsBITVX {
                     }
 
                     for (let i = 0; i < Sensor_Right.length; i++) {
-                        if ((pins.map(ADCRead(ADC_PIN[Sensor_Right[i]]), Color_Line_Right[i], Color_Background_Right[i], 1000, 0)) >= 800) {
+                        if ((pins.map(ADCRead(ADC_PIN[Sensor_Right[i]]), Color_Line_Right[i], Color_Background_Right[i], 1000, 0)) >= 500) {
                             last_right += 1
                             if (found_right < Sensor_Right.length) {
                                 found_right += 1
@@ -1117,14 +1117,16 @@ namespace PTKidsBITVX {
             else if (line_state == 2) {
                 if (find == Find_Line.Left) {
                     if (found_left == Sensor_Left.length && found_right != Sensor_Right.length) {
-                        if (direction == Forward_Direction.Forward) {
-                            motorGo(-100, -100, -100, -100)
+                        if (break_time > 0) {
+                            if (direction == Forward_Direction.Forward) {
+                                motorGo(-100, -100, -100, -100)
+                            }
+                            else {
+                                motorGo(100, 100, 100, 100)
+                            }
+                            basic.pause(break_time)
+                            motorStop()
                         }
-                        else {
-                            motorGo(100, 100, 100, 100)
-                        }
-                        basic.pause(break_time)
-                        motorStop()
                         break
                     }
                     else {
@@ -1134,15 +1136,17 @@ namespace PTKidsBITVX {
                     }
                 }
                 else if (find == Find_Line.Center) {
-                    if (found_left == Sensor_Left.length && found_right == Sensor_Right.length) {
-                        if (direction == Forward_Direction.Forward) {
-                            motorGo(-100, -100, -100, -100)
+                    if (found_left == Sensor_Left.length || found_right == Sensor_Right.length) {
+                        if (break_time > 0) {
+                            if (direction == Forward_Direction.Forward) {
+                                motorGo(-100, -100, -100, -100)
+                            }
+                            else {
+                                motorGo(100, 100, 100, 100)
+                            }
+                            basic.pause(break_time)
+                            motorStop()
                         }
-                        else {
-                            motorGo(100, 100, 100, 100)
-                        }
-                        basic.pause(break_time)
-                        motorStop()
                         break
                     }
                     else {
@@ -1153,14 +1157,16 @@ namespace PTKidsBITVX {
                 }
                 else if (find == Find_Line.Right) {
                     if (found_left != Sensor_Left.length && found_right == Sensor_Right.length) {
-                        if (direction == Forward_Direction.Forward) {
-                            motorGo(-100, -100, -100, -100)
+                        if (break_time > 0) {
+                            if (direction == Forward_Direction.Forward) {
+                                motorGo(-100, -100, -100, -100)
+                            }
+                            else {
+                                motorGo(100, 100, 100, 100)
+                            }
+                            basic.pause(break_time)
+                            motorStop()
                         }
-                        else {
-                            motorGo(100, 100, 100, 100)
-                        }
-                        basic.pause(break_time)
-                        motorStop()
                         break
                     }
                     else {
