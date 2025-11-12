@@ -1004,6 +1004,36 @@ namespace PTKidsBITVX {
         previous_error = 0
 
         while (1) {
+            found_left = 0
+            found_right = 0
+            for (let i = 0; i < Sensor_Left.length; i++) {
+                if ((pins.map(ADCRead(ADC_PIN[Sensor_Left[i]]), Color_Line_Left[i], Color_Background_Left[i], 1000, 0)) >= 500) {
+                    if (found_left < Sensor_Left.length) {
+                        found_left += 1
+                    }
+                }
+            }
+
+            for (let i = 0; i < Sensor_Right.length; i++) {
+                if ((pins.map(ADCRead(ADC_PIN[Sensor_Right[i]]), Color_Line_Right[i], Color_Background_Right[i], 1000, 0)) >= 500) {
+                    if (found_right < Sensor_Right.length) {
+                        found_right += 1
+                    }
+                }
+            }
+
+            if (found_left > 0 || found_right > 0) {
+                motorGo(min_speed, min_speed, min_speed, min_speed)
+            }
+            else {
+                break
+            }
+        }
+
+        found_left = 0
+        found_right = 0
+
+        while (1) {
             for (let i = 0; i < Sensor_PIN.length; i++) {
                 if ((pins.map(ADCRead(ADC_PIN[Sensor_PIN[i]]), Color_Line[i], Color_Background[i], 1000, 0)) >= 200) {
                     last_center += 1
