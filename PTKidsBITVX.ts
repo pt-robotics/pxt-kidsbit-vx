@@ -214,44 +214,40 @@ namespace PTKidsBITVX {
         if (initI2C == false) {
             initPCA()
         }
-        let i2cData = pins.createBuffer(2)
-        let start = 0
+
         let angle_input = pins.map(angle, 0, 180, -90, 90)
         angle = Math.max(Math.min(90, angle_input), -90)
-        let stop = 369 + angle * 235 / 90
-        i2cData[0] = SERVOS + servo * 4 + 2
-        i2cData[1] = (stop & 0xff)
-        pins.i2cWriteBuffer(PCA, i2cData, false)
 
-        i2cData[0] = SERVOS + servo * 4 + 3
-        i2cData[1] = (stop >> 8)
-        pins.i2cWriteBuffer(PCA, i2cData, false)
+        let stop = 369 + angle * 235 / 90
+        let reg = SERVOS + servo * 4
+        let buf = pins.createBuffer(5)
+
+        buf[0] = reg
+        buf[1] = 0x00
+        buf[2] = 0x00
+        buf[3] = stop & 0xff
+        buf[4] = (stop >> 8) & 0x0f
+
+        pins.i2cWriteBuffer(PCA, buf, false)
     }
 
     function analogWritePCA(channel: number, value: number): void {
         if (initI2C == false) {
-            initPCA();
+            initPCA()
         }
 
-        value = Math.max(0, Math.min(4095, value));
-        let onValue = 0;
-        let offValue = value;
-        let i2cData = pins.createBuffer(2);
-        i2cData[0] = SERVOS + channel * 4;
-        i2cData[1] = onValue & 0xff;
-        pins.i2cWriteBuffer(PCA, i2cData, false);
+        value = Math.max(0, Math.min(4095, value))
 
-        i2cData[0] = SERVOS + channel * 4 + 1;
-        i2cData[1] = (onValue >> 8) & 0xff;
-        pins.i2cWriteBuffer(PCA, i2cData, false);
+        let reg = SERVOS + channel * 4
+        let buf = pins.createBuffer(5)
 
-        i2cData[0] = SERVOS + channel * 4 + 2;
-        i2cData[1] = offValue & 0xff;
-        pins.i2cWriteBuffer(PCA, i2cData, false);
+        buf[0] = reg
+        buf[1] = 0x00
+        buf[2] = 0x00
+        buf[3] = value & 0xff
+        buf[4] = (value >> 8) & 0x0f
 
-        i2cData[0] = SERVOS + channel * 4 + 3;
-        i2cData[1] = (offValue >> 8) & 0xff;
-        pins.i2cWriteBuffer(PCA, i2cData, false);
+        pins.i2cWriteBuffer(PCA, buf, false)
     }
 
     function initBNO055() {
