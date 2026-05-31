@@ -828,6 +828,7 @@ namespace PTKidsBITVX {
     //% block="Read ADC %ADC_Read"
     export function ADCRead(ADCRead: ADC_Read): number {
         pins.i2cWriteNumber(0x48, ADCRead, NumberFormat.UInt8LE, false)
+        control.waitMicros(100)
         return ADCRead = pins.i2cReadNumber(0x48, NumberFormat.UInt16BE, false)
     }
 
